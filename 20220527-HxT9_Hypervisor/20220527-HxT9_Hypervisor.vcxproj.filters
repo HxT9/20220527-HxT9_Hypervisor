@@ -1,0 +1,157 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Driver Files">
+      <UniqueIdentifier>{8E41214B-6785-4CFE-B992-037D68949A14}</UniqueIdentifier>
+      <Extensions>inf;inv;inx;mof;mc;</Extensions>
+    </Filter>
+    <Filter Include="Source Files\OS Native">
+      <UniqueIdentifier>{981b0a67-ed41-47f8-a58e-f04631d89e1e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\OS Native\Windows">
+      <UniqueIdentifier>{eb09a2e0-9aff-4ca3-b1fb-4d3e5d4b8183}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Arch">
+      <UniqueIdentifier>{54311cdb-af1b-4796-a452-c46e25005bd5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Arch\Intel">
+      <UniqueIdentifier>{3fba94ca-be4f-436a-8ff2-3fcd2faea76a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Arch\Intel\ia-32">
+      <UniqueIdentifier>{535e49f5-590a-4b68-b4b7-20e9788c26fe}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Utilities">
+      <UniqueIdentifier>{403875ba-a0f8-4ae0-ac19-e1e1d8956127}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Vmm">
+      <UniqueIdentifier>{9de056f3-3075-472b-b137-5cc96e802c02}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Logger">
+      <UniqueIdentifier>{298d65f3-65b0-41db-809d-d1165701fb7f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Precompiled Header">
+      <UniqueIdentifier>{5c2db578-f601-4c1c-9136-8502838cdf9c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\ASM">
+      <UniqueIdentifier>{a934c10c-8f2b-4959-8093-d1cf2d894d0e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Vmx">
+      <UniqueIdentifier>{470d8417-d39c-4e81-964c-61bb0fe17e3b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Vmcs">
+      <UniqueIdentifier>{0816d453-e0f9-4054-9ad9-aa39d8f17802}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Exit">
+      <UniqueIdentifier>{e6957a8c-29c0-4caf-8bc8-5e07efdbf685}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Ept">
+      <UniqueIdentifier>{6f7996af-3add-487e-b679-93192151471e}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <Inf Include="20220527-HxT9_Hypervisor.inf">
+      <Filter>Driver Files</Filter>
+    </Inf>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Entry.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="WindowsNT.c">
+      <Filter>Source Files\OS Native\Windows</Filter>
+    </ClCompile>
+    <ClCompile Include="ArchIntel.c">
+      <Filter>Source Files\Arch\Intel</Filter>
+    </ClCompile>
+    <ClCompile Include="Utilities.c">
+      <Filter>Source Files\Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="Vmm.c">
+      <Filter>Source Files\Vmm</Filter>
+    </ClCompile>
+    <ClCompile Include="Logger.c">
+      <Filter>Source Files\Logger</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.c">
+      <Filter>Source Files\Precompiled Header</Filter>
+    </ClCompile>
+    <ClCompile Include="Vmx.c">
+      <Filter>Source Files\Vmx</Filter>
+    </ClCompile>
+    <ClCompile Include="Vmcs.c">
+      <Filter>Source Files\Vmcs</Filter>
+    </ClCompile>
+    <ClCompile Include="Exit.c">
+      <Filter>Source Files\Exit</Filter>
+    </ClCompile>
+    <ClCompile Include="Ept.c">
+      <Filter>Source Files\Ept</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ia-32\ia32.h">
+      <Filter>Source Files\Arch\Intel\ia-32</Filter>
+    </ClInclude>
+    <ClInclude Include="ia-32\ia32.hpp">
+      <Filter>Source Files\Arch\Intel\ia-32</Filter>
+    </ClInclude>
+    <ClInclude Include="ia-32\ia32_compact.h">
+      <Filter>Source Files\Arch\Intel\ia-32</Filter>
+    </ClInclude>
+    <ClInclude Include="ia-32\ia32_defines_only.h">
+      <Filter>Source Files\Arch\Intel\ia-32</Filter>
+    </ClInclude>
+    <ClInclude Include="WindowsNT.h">
+      <Filter>Source Files\OS Native\Windows</Filter>
+    </ClInclude>
+    <ClInclude Include="ArchIntel.h">
+      <Filter>Source Files\Arch\Intel</Filter>
+    </ClInclude>
+    <ClInclude Include="Utilities.h">
+      <Filter>Source Files\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="Vmm.h">
+      <Filter>Source Files\Vmm</Filter>
+    </ClInclude>
+    <ClInclude Include="Logger.h">
+      <Filter>Source Files\Logger</Filter>
+    </ClInclude>
+    <ClInclude Include="VmmContext.h">
+      <Filter>Source Files\Vmm</Filter>
+    </ClInclude>
+    <ClInclude Include="Settings.h">
+      <Filter>Source Files\Vmm</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>Source Files\Precompiled Header</Filter>
+    </ClInclude>
+    <ClInclude Include="Vmx.h">
+      <Filter>Source Files\Vmx</Filter>
+    </ClInclude>
+    <ClInclude Include="Vmcs.h">
+      <Filter>Source Files\Vmcs</Filter>
+    </ClInclude>
+    <ClInclude Include="Exit.h">
+      <Filter>Source Files\Exit</Filter>
+    </ClInclude>
+    <ClInclude Include="Ept.h">
+      <Filter>Source Files\Ept</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="VmxDefs.asm">
+      <Filter>Source Files\ASM</Filter>
+    </MASM>
+    <MASM Include="ArchDefs.asm">
+      <Filter>Source Files\ASM</Filter>
+    </MASM>
+  </ItemGroup>
+</Project>

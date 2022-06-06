@@ -1,0 +1,9 @@
+#pragma once
+
+#define VMX_PWD 0x359309
+
+#define VMM_SETTING_STACK_SPACE PAGE_SIZE * 8
+
+#define VMX_CPUID_TERMINATE_PWD VMX_PWD
+
+#define VMX_VMCALL_HOOK_PWD VMX_PWD
