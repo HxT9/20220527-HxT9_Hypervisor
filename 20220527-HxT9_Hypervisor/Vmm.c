@@ -8,6 +8,7 @@
 #include "Vmcs.h"
 #include "Exit.h"
 #include "Ept.h"
+#include "EptHook.h"
 
 /*
  * Defined in VmxDefs.asm.
@@ -124,15 +125,6 @@ PVMM_PROCESSOR_CONTEXT AllocateCPUContext(PVMM_CONTEXT Context) {
     OsZeroMemory(CpuContext->MsrBitmap, PAGE_SIZE);
     CpuContext->MsrBitmapPhysical = OsVirtualToPhysical(CpuContext->MsrBitmap);
 
-    /*
-     * Initialize EPT paging structures and the EPTP that we will apply to the VMCS.
-     */
-    if (!EptLogicalProcessorInitialize(CpuContext))
-    {
-        OsFreeContiguousAlignedPages(CpuContext);
-        return NULL;
-    }
-
     return CpuContext;
 }
 
@@ -193,13 +185,19 @@ VOID FreeLogicalProcessorContext(PVMM_PROCESSOR_CONTEXT Context)
         if (Context->MsrBitmap)
             OsFreeContiguousAlignedPages(Context->MsrBitmap);
 
-        // Free Ept
-        if (Context->EptPageTable)
-            EptFreeLogicalProcessorContext(Context);
-
         // Free actual context
         OsFreeNonpagedMemory(Context);
     }
+}
+
+VOID FreeVmmEpt(PVMM_CONTEXT Context) {
+    EptClearHooks(Context);
+
+    if(Context->EptState->EptPageTable)
+        OsFreeContiguousAlignedPages(Context->EptState->EptPageTable);
+
+    if(Context->EptState)
+        OsFreeNonpagedMemory(Context->EptState);
 }
 
 VOID FreeVmmContext(PVMM_CONTEXT Context) {
@@ -213,6 +211,9 @@ VOID FreeVmmContext(PVMM_CONTEXT Context) {
 
         // Free the collection of pointers to processor contexts
         OsFreeNonpagedMemory(Context->ProcessorContext);
+
+        // Free Ept
+        FreeVmmEpt(Context);
 
         // Free the actual context
         OsFreeNonpagedMemory(Context);
@@ -277,14 +278,14 @@ VOID NTAPI InitializeProcessors(_In_ struct _KDPC* Dpc, _In_opt_ PVOID DeferredC
  *
  * See: BeginInitializeLogicalProcessor and VmxDefs.asm.
  */
-VOID InitializeLogicalProcessor(PVMM_PROCESSOR_CONTEXT Context, SIZE_T GuestRSP, SIZE_T GuestRIP)
+VOID InitializeLogicalProcessor(PVMM_PROCESSOR_CONTEXT CpuContext, SIZE_T GuestRSP, SIZE_T GuestRIP)
 {
     SIZE_T CurrentProcessorNumber;
 
     // Get the current processor we're executing this function on right now
     CurrentProcessorNumber = OsGetCurrentProcessorNumber();
 
-    if (!VmxEnterRootMode(Context))
+    if (!VmxEnterRootMode(CpuContext))
     {
         HxTLog("[#%i]InitializeLogicalProcessor: Failed to enter VMX Root Mode.\n", CurrentProcessorNumber);
         return;
@@ -292,16 +293,18 @@ VOID InitializeLogicalProcessor(PVMM_PROCESSOR_CONTEXT Context, SIZE_T GuestRSP,
 
     // Setup VMCS with all values necessary to begin VMXLAUNCH
     // &Context->HostStack.GlobalContext is also the top of the host stack
-    if (!SetupVmcsDefaults(Context, (SIZE_T)&EnterFromGuest, (SIZE_T)&Context->HostStack.GlobalContext, GuestRIP, GuestRSP))
+    if (!SetupVmcsDefaults(CpuContext, (SIZE_T)&EnterFromGuest, (SIZE_T)&CpuContext->HostStack.GlobalContext, GuestRIP, GuestRSP))
     {
         HxTLog("[#%i]InitializeLogicalProcessor: Failed to setup VMCS.\n", CurrentProcessorNumber);
-        VmxExitRootMode(Context);
+        VmxExitRootMode(CpuContext);
         return;
     }
 
+    MemoryMapperInitialize(CpuContext);
+
     // Launch the hypervisor! This function should not return if it is successful, as we continue execution
     // on the guest.
-    if (!VmxLaunchProcessor(Context))
+    if (!VmxLaunchProcessor(CpuContext))
     {
         HxTLog("InitializeLogicalProcessor[#%i]: Failed to VmxLaunchProcessor.\n", CurrentProcessorNumber);
         return;
@@ -321,9 +324,9 @@ PVMM_CONTEXT InitializeVmx() {
         return NULL;
     }
 
-    if (!EptGlobalInitialize(Context))
+    if (!EptInitialize(Context))
     {
-        HxTLog("Processor does not support all necessary EPT features.\n");
+        HxTLog("Couldn't initialize EPT\n");
         FreeVmmContext(Context);
         return NULL;
     }
@@ -342,38 +345,23 @@ PVMM_CONTEXT InitializeVmx() {
     return Context;
 }
 
+extern void TerminateVmcall();
 /**
  * DPC to exit VMX on all processors.
  */
 VOID NTAPI ExitRootModeOnAllProcessors(_In_ struct _KDPC* Dpc, _In_opt_ PVOID DeferredContext, _In_opt_ PVOID SystemArgument1, _In_opt_ PVOID SystemArgument2)
 {
-    SIZE_T CurrentProcessorNumber;
     PVMM_PROCESSOR_CONTEXT CpuContext;
     PVMM_CONTEXT Context;
-    INT32 cpuInfo[4];
 
     UNREFERENCED_PARAMETER(Dpc);
     Context = (PVMM_CONTEXT)DeferredContext;
-
-    // Get the current processor number we're executing this function on right now
-    CurrentProcessorNumber = OsGetCurrentProcessorNumber();
 
     // Get the logical processor context that was allocated for this current processor
     CpuContext = GetCurrentCPUContext(Context);
     
     if (CpuContext->Launched) {
-        cpuInfo[0] = cpuInfo[1] = 0;
-        __cpuidex(cpuInfo, VMX_CPUID_TERMINATE_PWD, 0);
-
-        // Initialize processor for VMX
-        /*if (VmxExitRootMode(CpuContext))
-        {
-            HxTLog("ExitRootModeOnAllProcessors[#%i]: Exiting VMX mode.\n", CurrentProcessorNumber);
-        }
-        else
-        {
-            HxTLog("ExitRootModeOnAllProcessors[#%i]: Failed to exit VMX mode.\n", CurrentProcessorNumber);
-        }*/
+        TerminateVmcall();
     }
 
     // These must be called for GenericDpcCall to signal other processors
@@ -447,8 +435,16 @@ BOOL HandleVmExit(PVMM_CONTEXT Context, PGPREGISTER_CONTEXT GuestRegisters)
     return Success;
 }
 
-BOOL HandleVmExitFailure(PVMM_CONTEXT Context, PGPREGISTER_CONTEXT GuestRegisters)
+UINT64 VmxOffGetRsp(PVMM_CONTEXT Context) {
+    return GetCurrentCPUContext(Context)->ExitRSP;
+}
+UINT64 VmxOffGetRip(PVMM_CONTEXT Context) {
+    return GetCurrentCPUContext(Context)->ExitRIP;
+}
+
+BOOL HandleVmxOff(PVMM_CONTEXT Context, PGPREGISTER_CONTEXT GuestRegisters)
 {
+    __debugbreak();
     PVMM_PROCESSOR_CONTEXT ProcessorContext;
 
     UNREFERENCED_PARAMETER(GuestRegisters);

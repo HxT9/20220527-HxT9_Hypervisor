@@ -1,7 +1,9 @@
 
 EXTERN InitializeLogicalProcessor : PROC
 EXTERN HandleVmExit : PROC
-EXTERN HandleVmExitFailure : PROC
+EXTERN HandleVmxOff : PROC
+EXTERN VmxOffGetRsp : PROC
+EXTERN VmxOffGetRip : PROC
 
 .CODE
 
@@ -95,6 +97,11 @@ guest_resumes_here:
 	ret
 BeginInitializeLogicalProcessor ENDP
 
+TerminateVmcall PROC
+	mov rcx, 0359309h
+	mov rax, 99
+	vmcall
+TerminateVmcall ENDP
 
 ; VM entry point. This is where the processor will start execution
 ; when the VM exits. This function is responsible for saving all
@@ -132,7 +139,7 @@ EnterFromGuest PROC
 
 	; If it's not successful, we need to stop and figure out why
 	test al, al
-	jz handler_fail
+	jz AsmHandleVmxOff
 	
 	; Otherwise, restore registers before guest
 	PopGeneralPurposeRegisterContext
@@ -165,7 +172,7 @@ handler_fail:
 
 	; Call failure handler. This will go ahead and disable VMX Root mode on this processor.
 	; Afterwards, the processor will remain in non-VMX mode. 
-	call HandleVmExitFailure
+	call HandleVmxOff
 
 	; Shadow space
 	add rsp, 20h
@@ -188,9 +195,58 @@ fatal_error:
 
 EnterFromGuest ENDP
 
-__invept PROC
-    invept rcx, OWORD PTR [rdx]
+AsmHandleVmxOff PROC
+	mov rcx, [rsp+080h]
+	sub rsp, 020h ; shadow space
+    call VmxOffGetRsp
+    add rsp, 020h ; remove for shadow space
+    mov [rsp+88h], rax  ; now, rax contains rsp
+    
+	mov rcx, [rsp+080h]
+    sub rsp, 020h      ; shadow space
+    call VmxOffGetRip
+    add rsp, 020h      ; remove for shadow space
+    
+    mov rdx, rsp       ; save current rsp
+    
+    mov rbx, [rsp+88h] ; read rsp again
+    
+    mov rsp, rbx
+    
+    push rax            ; push the return address as we changed the stack, we push
+                  		; it to the new stack
+    
+    mov rsp, rdx        ; restore previous rsp
+                    
+    sub rbx,08h         ; we push sth, so we have to add (sub) +8 from previous stack
+                   		; also rbx already contains the rsp
+    mov [rsp+88h], rbx  ; move the new pointer to the current stack
+
+	PopGeneralPurposeRegisterContext
+
+    popfq
+    pop		rsp     ; restore rsp
+
+    ret             ; jump back to where we called Vmcall
+
+AsmHandleVmxOff ENDP
+
+AsmInvept PROC
+    invept  rcx, oword ptr [rdx]
+    jz ErrorWithStatus
+    jc ErrorCodeFailed
+    
+    xor     rax, rax
     ret
-__invept ENDP
+
+ErrorWithStatus: 
+    mov     rax, 1
+    ret
+
+ErrorCodeFailed:
+    mov     rax, 2
+    ret
+
+AsmInvept ENDP
 
 END

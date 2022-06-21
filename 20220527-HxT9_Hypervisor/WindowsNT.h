@@ -74,3 +74,15 @@ VOID OsFreeContiguousAlignedPages(PVOID PageRegionAddress);
  * Returns NULL if the bytes could not be allocated.
  */
 PVOID OsAllocateExecutableNonpagedMemory(SIZE_T NumberOfBytes);
+
+/**
+ * @brief This function reserve memory from system range (without physically allocating them)
+ *
+ * @param Size Size of reserving buffers
+ * @return PVOID Return the VA of the page
+ */
+PVOID OsAllocateMappingAddress(SIZE_T NumberOfBytes);
+
+VOID OsFreeMappingAddress(PVOID Address);
+
+BOOL OsIsWow64Process(PEPROCESS process);

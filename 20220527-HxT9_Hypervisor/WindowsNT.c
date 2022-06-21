@@ -106,3 +106,17 @@ PVOID OsAllocateExecutableNonpagedMemory(SIZE_T NumberOfBytes)
 
 	return Output;
 }
+
+PVOID OsAllocateMappingAddress(SIZE_T NumberOfBytes) {
+	return MmAllocateMappingAddress(NumberOfBytes, HV_POOL_TAG);
+}
+
+VOID OsFreeMappingAddress(PVOID Address) {
+	MmFreeMappingAddress(Address, HV_POOL_TAG);
+}
+
+NTKERNELAPI PVOID NTAPI PsGetProcessWow64Process(IN PEPROCESS Process);
+BOOL OsIsWow64Process(PEPROCESS process)
+{
+	return PsGetProcessWow64Process(process) != NULL;
+} 

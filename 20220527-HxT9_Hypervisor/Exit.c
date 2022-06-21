@@ -4,6 +4,15 @@
 #include "Logger.h"
 #include "WindowsNT.h"
 #include "Ept.h"
+#include "Memory.h"
+#include "EptHook.h"
+#include "Vmx.h"
+
+typedef struct _HookData {
+	unsigned __int64 FunctionToHook;
+	unsigned __int64 HkFunction;
+	unsigned __int64 TrampolineFunction;
+} HookData, * PHookData;
 
 VOID ExitHandleTerminateVmx(PVMM_PROCESSOR_CONTEXT ProcessorContext, PVMEXIT_CONTEXT ExitContext);
 
@@ -56,12 +65,6 @@ VOID ExitHandleCpuid(PVMM_PROCESSOR_CONTEXT ProcessorContext, PVMEXIT_CONTEXT Ex
 {
 	INT32 CPUInfo[4];
 
-	//Terminate Vmx
-	if (ExitContext->GuestContext->GuestRAX == VMX_CPUID_TERMINATE_PWD) {
-		ExitHandleTerminateVmx(ProcessorContext, ExitContext);
-		return;
-	}
-
 	// Perform actual CPUID
 	__cpuidex(CPUInfo, (int)ExitContext->GuestContext->GuestRAX, (int)ExitContext->GuestContext->GuestRCX);
 
@@ -88,10 +91,49 @@ VOID ExitHandleEptMisconfiguration(PVMM_PROCESSOR_CONTEXT ProcessorContext, PVME
 
 VOID ExitHandleVmcall(PVMM_PROCESSOR_CONTEXT ProcessorContext, PVMEXIT_CONTEXT ExitContext)
 {
-	__debugbreak();
+	SIZE_T Size;
+	DWORD Pid = 0;
+	__int32 Value;
+	BOOL IsX64 = FALSE;
+	PEPROCESS PeProc;
+	HookData hkData;
+
 	if (ExitContext->GuestContext->GuestRCX == VMX_VMCALL_HOOK_PWD) {
-		HxTLog("VmCall add page hook at 0x%p to 0x%p trampoline at 0x%p", ExitContext->GuestContext->GuestRDX, ExitContext->GuestContext->GuestRAX, (PVOID*)ExitContext->GuestContext->GuestRBX);
-		EptAddPageHook(ProcessorContext, ExitContext->GuestContext->GuestRDX, ExitContext->GuestContext->GuestRAX, (PVOID*)ExitContext->GuestContext->GuestRBX);
+		__debugbreak();
+		//HxTLog("VmCall add page hook at 0x%p to 0x%p trampoline at 0x%p", ExitContext->GuestContext->GuestRDX, ExitContext->GuestContext->GuestRAX, (PVOID*)ExitContext->GuestContext->GuestRBX);
+		//EptAddPageHook(ProcessorContext, ExitContext->GuestContext->GuestRDX, ExitContext->GuestContext->GuestRAX, (PVOID*)ExitContext->GuestContext->GuestRBX);
+
+		switch ((__int32)ExitContext->GuestContext->GuestRAX) {
+		case 1: //Hook
+			//RBX Pid
+			//RDX Address to hook
+			//Stack Hook Function
+			//Stack + 8 Trampoline space
+			Pid = ExitContext->GuestContext->GuestRBX;
+			ReadVirtualMemory(ProcessorContext->GlobalContext, ExitContext->GuestContext->GuestRDX, &hkData, sizeof(HookData), Pid);
+
+			if (NT_SUCCESS(PsLookupProcessByProcessId(Pid, &PeProc))) {
+
+				IsX64 = !OsIsWow64Process(PeProc);
+				if (EptHookAddHook(ProcessorContext->GlobalContext, hkData.FunctionToHook, hkData.HkFunction, hkData.TrampolineFunction, Pid, IsX64)) {
+					HxTLog("Hook ok\n");
+				}
+				else {
+					HxTLog("Hook failed\n");
+				}
+
+				ObDereferenceObject(PeProc);
+			}
+
+			break;
+		case 2: //EPT Reset Hooks
+			EptClearHooks(ProcessorContext->GlobalContext);
+			break;
+		case 99:
+			ExitHandleTerminateVmx(ProcessorContext, ExitContext);
+			return;
+			break;
+		}
 	}
 
 	//
@@ -118,38 +160,88 @@ VOID ExitHandleVmx(PVMM_PROCESSOR_CONTEXT ProcessorContext, PVMEXIT_CONTEXT Exit
 	__vmx_vmwrite(VMCS_GUEST_RFLAGS, ExitContext->GuestFlags.EFLAGS.Flags);
 }
 
-extern void __lgdt(const void*);
-extern void __lidt(const void*);
-extern void ArchRestoreContext(CONTEXT* Registers);
+extern void AsmReloadGdtr(void* GdtBase, unsigned long GdtLimit);
+extern void AsmReloadIdtr(void* GdtBase, unsigned long GdtLimit);
+VOID RestoreRegisters()
+{
+	UINT64 FsBase;
+	UINT64 GsBase;
+	UINT64 GdtrBase;
+	UINT64 GdtrLimit;
+	UINT64 IdtrBase;
+	UINT64 IdtrLimit;
+
+	//
+	// Restore FS Base
+	//
+	__vmx_vmread(VMCS_GUEST_FS_BASE, &FsBase);
+	__writemsr(IA32_FS_BASE, FsBase);
+
+	//
+	// Restore Gs Base
+	//
+	__vmx_vmread(VMCS_GUEST_GS_BASE, &GsBase);
+	__writemsr(IA32_GS_BASE, GsBase);
+
+	//
+	// Restore GDTR
+	//
+	__vmx_vmread(VMCS_GUEST_GDTR_BASE, &GdtrBase);
+	__vmx_vmread(VMCS_GUEST_GDTR_LIMIT, &GdtrLimit);
+
+	AsmReloadGdtr(GdtrBase, GdtrLimit);
+
+	//
+	// Restore IDTR
+	//
+	__vmx_vmread(VMCS_GUEST_IDTR_BASE, &IdtrBase);
+	__vmx_vmread(VMCS_GUEST_IDTR_LIMIT, &IdtrLimit);
+
+	AsmReloadIdtr(IdtrBase, IdtrLimit);
+}
 VOID ExitHandleTerminateVmx(PVMM_PROCESSOR_CONTEXT ProcessorContext, PVMEXIT_CONTEXT ExitContext) {
-	__debugbreak();
-	SIZE_T value = 0;
-	SIZE_T VmError = 0;
-	SIZE_T GuestInstructionLength = 0;
-	SEGMENT_DESCRIPTOR_REGISTER_64 GdtRegister;
-	SEGMENT_DESCRIPTOR_REGISTER_64 IdtRegister;
+	UINT64 GuestRSP = 0, GuestRIP = 0, GuestCr3 = 0, ExitInstructionLength = 0;
+	
+	//
+	// According to SimpleVisor :
+	//  	Our callback routine may have interrupted an arbitrary user process,
+	//  	and therefore not a thread running with a system-wide page directory.
+	//  	Therefore if we return back to the original caller after turning off
+	//  	VMX, it will keep our current "host" CR3 value which we set on entry
+	//  	to the PML4 of the SYSTEM process. We want to return back with the
+	//  	correct value of the "guest" CR3, so that the currently executing
+	//  	process continues to run with its expected address space mappings.
+	//
 
-	__vmx_vmread(VMCS_GUEST_GDTR_LIMIT, &GdtRegister.Limit);
-	__vmx_vmread(VMCS_GUEST_GDTR_BASE, &GdtRegister.BaseAddress);
+	__vmx_vmread(VMCS_GUEST_CR3, &GuestCr3);
+	__writecr3(GuestCr3);
 
-	__vmx_vmread(VMCS_GUEST_LDTR_LIMIT, &IdtRegister.Limit);
-	__vmx_vmread(VMCS_GUEST_LDTR_BASE, &IdtRegister.BaseAddress);
+	//
+	// Read guest rsp and rip
+	//
+	__vmx_vmread(VMCS_GUEST_RIP, &GuestRIP);
+	__vmx_vmread(VMCS_GUEST_RSP, &GuestRSP);
 
-	//__lgdt(&GdtRegister);
-	//__lidt(&IdtRegister);
+	//
+	// Read instruction length
+	//
+	__vmx_vmread(VMCS_VMEXIT_INSTRUCTION_LENGTH, &ExitInstructionLength);
+	GuestRIP += ExitInstructionLength;
 
-	__vmx_vmread(VMCS_GUEST_CR3, &value);
-	__writecr3(value);
+	//
+	// Set the previous register states
+	//
+	ProcessorContext->ExitRSP = GuestRSP;
+	ProcessorContext->ExitRIP = GuestRIP;
 
-	ProcessorContext->RegistersContext.Rsp = ExitContext->GuestContext->GuestRSP;
+	ExitContext->ShouldStopExecution = TRUE;
 
-	VmxVmreadFieldToImmediate(VMCS_VMEXIT_INSTRUCTION_LENGTH, &GuestInstructionLength);
-	ProcessorContext->RegistersContext.Rip = ExitContext->GuestRIP + GuestInstructionLength;
-	ProcessorContext->SpecialRegistersContext.RflagsRegister.Flags = ExitContext->GuestFlags.EFLAGS.Flags;
+	//
+	// Restore the previous FS, GS , GDTR and IDTR register as patchguard might find the modified
+	//
+	RestoreRegisters();
 
-	__vmx_off();
-
-	ArchRestoreContext(&ProcessorContext->RegistersContext);
+	VmxExitRootMode(ProcessorContext);
 }
 
 VOID ExitHandleUnknownExit(PVMM_PROCESSOR_CONTEXT ProcessorContext, PVMEXIT_CONTEXT ExitContext)
@@ -197,7 +289,7 @@ BOOL ExitDispatchFunction(PVMM_PROCESSOR_CONTEXT ProcessorContext, PVMEXIT_CONTE
 		ExitHandleEptMisconfiguration(ProcessorContext, ExitContext);
 		break;
 	case VMX_EXIT_REASON_EPT_VIOLATION:
-		ExitHandleEptViolation(ProcessorContext, ExitContext);
+		EptHandleEptViolation(ProcessorContext, ExitContext);
 		break;
 	case VMX_EXIT_REASON_EXECUTE_VMCALL:
 		ExitHandleVmcall(ProcessorContext, ExitContext);

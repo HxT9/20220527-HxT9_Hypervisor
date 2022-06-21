@@ -1,7 +1,15 @@
 #include <Windows.h>
 #include <stdio.h>
 
-extern void asmHook(SIZE_T ecx_pwd, SIZE_T edx_functionToHook, SIZE_T eax_hkFunction, SIZE_T ebx_trampoline);
+extern void asmHook(SIZE_T ecx_pwd, SIZE_T edx_HookData, SIZE_T eax_action, SIZE_T ebx_pid);
+extern void asmCleanHook();
+extern void asmTest();
+
+typedef struct _HookData {
+    unsigned __int64 FunctionToHook;
+    unsigned __int64 HkFunction;
+    unsigned __int64 TrampolineFunction;
+} HookData, *PHookData;
 
 void (*printFun)();
 
@@ -10,41 +18,69 @@ void print() {
 }
 
 void hkPrint() {
+    DebugBreak();
     printf("Print hooked");
     printFun();
 }
 
 int main()
 {
-    SIZE_T origPrint = (SIZE_T)print;
-    SIZE_T hookPrint = (SIZE_T)hkPrint;
-    SIZE_T printFunction = (SIZE_T)&printFun;
+    HookData hkData;
+
+    asmCleanHook();
 
     printf("Tester\n");
-    printf("origPrint         0x%p\n", origPrint);
-    printf("hookPrint         0x%p\n", hookPrint);
-    printf("printFunction Ref 0x%p\n", printFunction);
+    while (1) {
+        printf("Pid               0x%p\n", GetCurrentProcessId());
+        printf("origPrint         0x%p\n", &print);
+        printf("hookPrint         0x%p\n", &hkPrint);
+        printFun = malloc(0x100);
+        printf("printFunction Ref 0x%p\n", &printFun);
 
-    printf("Calling print\n");
-    print();
 
-    printf("Hooking\n");
+        hkData.FunctionToHook = &print;
+        hkData.HkFunction = &hkPrint;
+        hkData.TrampolineFunction = &printFun;
 
-    __try {
+        printf("Calling print. Press Enter to continue\n");
+        getch();
+
+        print();
+
+        printf("Hooking\n");
+
+        unsigned __int64 rax;
+        unsigned __int64 rbx;
+        unsigned __int64 rcx;
+        unsigned __int64 rdx;
+        rcx = 0x359309;
+        rax = 1;
+        rbx = GetCurrentProcessId();
+        rdx = &hkData;
+
+        Sleep(500);
+
+        __try {
 #ifdef x86
-        __asm {
-            mov ecx, 0x359309
-            mov edx, origPrint
-            mov eax, hookPrint
-            mov ebx, printFunction
-            vmcall
-        }
+            __asm {
+                mov ecx, 0x359309
+                mov edx, origPrint
+                mov eax, hookPrint
+                mov ebx, printFunction
+                vmcall
+            }
 #else
-        asmHook(0x359309, origPrint, hookPrint, printFunction);
+            asmHook(rcx, rdx, rax, rbx);
 #endif
-    }
-    __except (EXCEPTION_EXECUTE_HANDLER) {}
+        }
+        __except (EXCEPTION_EXECUTE_HANDLER) {}
 
-    printf("Calling print\n");
-    print();
+        printf("Calling print\n");
+        print();
+
+        getch();
+    }
+
+    asmCleanHook();
+    system("pause");
 }

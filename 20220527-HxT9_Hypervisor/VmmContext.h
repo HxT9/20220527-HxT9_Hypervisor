@@ -3,6 +3,7 @@
 #include "Settings.h"
 #include "ArchIntel.h"
 #include "Ept.h"
+#include "Memory.h"
 
 typedef struct _VMM_CONTEXT VMM_CONTEXT, * PVMM_CONTEXT;
 
@@ -44,10 +45,10 @@ typedef struct _VMM_PROCESSOR_CONTEXT {
 
 	VMM_HOST_STACK_REGION HostStack;
 
-	EPT_POINTER EptPointer;
+	MEMORY_MAPPER_ADDRESSES MemoryMapper;
 
-	PVMM_EPT_PAGE_TABLE EptPageTable;
-
+	UINT64 ExitRSP;
+	UINT64 ExitRIP;
 }VMM_PROCESSOR_CONTEXT, *PVMM_PROCESSOR_CONTEXT;
 
 typedef struct _VMM_CONTEXT {
@@ -56,6 +57,5 @@ typedef struct _VMM_CONTEXT {
 	PVMM_PROCESSOR_CONTEXT* ProcessorContext;
 	IA32_VMX_BASIC_REGISTER VmxCapabilities;
 	SIZE_T SystemDirectoryTableBase;
-	MTRR_RANGE_DESCRIPTOR MemoryRanges[9];
-	ULONG EnabledMemoryRanges;
+	PEPT_STATE EptState;
 }VMM_CONTEXT, *PVMM_CONTEXT;

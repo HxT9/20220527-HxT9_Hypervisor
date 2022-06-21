@@ -643,7 +643,7 @@ SIZE_T SetupVmcsGuestArea(PVMM_PROCESSOR_CONTEXT Context, SIZE_T GuestRIP, SIZE_
 	 *  The extended-page-table pointer (EPTP) contains the address of the base of EPT PML4 table (see Section
 	 *  28.2.2), as well as other EPT configuration information. The format of this field is shown in Table 24-8.
 	 */
-	VmxVmwriteFieldFromRegister(VMCS_CTRL_EPT_POINTER, Context->EptPointer);
+	VmxVmwriteFieldFromRegister(VMCS_CTRL_EPT_POINTER, Context->GlobalContext->EptState->EptPointer);
 
 	return VmError;
 }

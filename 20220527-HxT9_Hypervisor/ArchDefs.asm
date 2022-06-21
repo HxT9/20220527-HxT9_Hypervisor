@@ -88,15 +88,29 @@ ArchReadLocalDescriptorTableRegister PROC
 	ret
 ArchReadLocalDescriptorTableRegister ENDP
 
-__lgdt PROC
-	lgdt	fword ptr [rcx]
-	ret
-__lgdt ENDP
+; AsmReloadGdtr (PVOID GdtBase (rcx), ULONG GdtLimit (rdx) );
+AsmReloadGdtr PROC
 
-__lidt PROC
-	lidt	fword ptr [rcx]
-	ret
-__lidt ENDP
+    push	rcx
+    shl		rdx, 48
+    push	rdx
+    lgdt	fword ptr [rsp+6]
+    pop		rax
+    pop		rax
+    ret
+AsmReloadGdtr ENDP
+
+; AsmReloadIdtr (PVOID IdtBase (rcx), ULONG IdtLimit (rdx) );
+AsmReloadIdtr PROC
+    
+    push	rcx
+    shl		rdx, 48
+    push	rdx
+    lidt	fword ptr [rsp+6]
+    pop		rax
+    pop		rax
+    ret
+AsmReloadIdtr ENDP
 
 ArchRestoreContext PROC
 

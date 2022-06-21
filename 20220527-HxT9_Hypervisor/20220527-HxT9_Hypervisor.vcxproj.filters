@@ -55,6 +55,12 @@
     <Filter Include="Source Files\Ept">
       <UniqueIdentifier>{6f7996af-3add-487e-b679-93192151471e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\Hook">
+      <UniqueIdentifier>{58114c9e-969f-4da0-ae30-cd5a20e6720b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Memory">
+      <UniqueIdentifier>{bf09858e-c6f7-477b-b6f9-4867c3a9f307}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Inf Include="20220527-HxT9_Hypervisor.inf">
@@ -94,6 +100,15 @@
     </ClCompile>
     <ClCompile Include="Ept.c">
       <Filter>Source Files\Ept</Filter>
+    </ClCompile>
+    <ClCompile Include="Spinlock.c">
+      <Filter>Source Files\Utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="EptHook.c">
+      <Filter>Source Files\Hook</Filter>
+    </ClCompile>
+    <ClCompile Include="Memory.c">
+      <Filter>Source Files\Memory</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -144,6 +159,18 @@
     </ClInclude>
     <ClInclude Include="Ept.h">
       <Filter>Source Files\Ept</Filter>
+    </ClInclude>
+    <ClInclude Include="Spinlock.h">
+      <Filter>Source Files\Utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="EptHook.h">
+      <Filter>Source Files\Hook</Filter>
+    </ClInclude>
+    <ClInclude Include="Memory.h">
+      <Filter>Source Files\Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="LengthDisassemblerEngine.h">
+      <Filter>Source Files\Utilities</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
