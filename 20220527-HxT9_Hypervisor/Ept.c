@@ -657,6 +657,24 @@ VOID EptSetPML1AndInvalidateTLB(PVMM_CONTEXT Context, PEPT_PML1_ENTRY EntryAddre
     SpinlockUnlock(&Pml1ModificationAndInvalidationLock);
 }
 
+VOID EptSetPML1(PVMM_CONTEXT Context, PEPT_PML1_ENTRY EntryAddress, EPT_PML1_ENTRY EntryValue)
+{
+    //
+    // acquire the lock
+    //
+    SpinlockLock(&Pml1ModificationAndInvalidationLock);
+
+    //
+    // set the value
+    //
+    EntryAddress->Flags = EntryValue.Flags;
+
+    //
+    // release the lock
+    //
+    SpinlockUnlock(&Pml1ModificationAndInvalidationLock);
+}
+
 /**
  * @brief Check if this exit is due to a violation caused by a currently hooked page
  * @details If the memory access attempt was RW and the page was marked executable, the page is swapped with
@@ -733,7 +751,6 @@ BOOLEAN EptHandlePageHookExit(PVMM_PROCESSOR_CONTEXT ProcessorContext, PVMEXIT_C
  */
 BOOLEAN EptHandleEptViolation(PVMM_PROCESSOR_CONTEXT ProcessorContext, PVMEXIT_CONTEXT ExitContext)
 {
-    __debugbreak();
     VMX_EXIT_QUALIFICATION_EPT_VIOLATION ViolationQualification;
 
     ViolationQualification.Flags = ExitContext->ExitQualification;

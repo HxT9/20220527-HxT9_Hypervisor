@@ -74,7 +74,6 @@ VOID EptHookWriteAbsoluteJump(PCHAR TargetBuffer, SIZE_T TargetAddress, BOOL IsX
 
 BOOL EptHookInstructionMemory(PVMM_CONTEXT Context, PEPT_HOOKED_PAGE_DETAIL Hook, UINT32 TargetProcessId, PVOID TargetFunction, PVOID TargetFunctionInSafeMemory, PVOID HookFunction, PVOID TrampolineAddress, BOOL IsX64)
 {
-    __debugbreak();
     SIZE_T SizeOfHookedInstructions;
     SIZE_T OffsetIntoPage;
     PCHAR TrampolineBuffer;
@@ -263,7 +262,7 @@ BOOLEAN EptHookAddHook(PVMM_CONTEXT Context, PVOID TargetAddress, PVOID HookFunc
     HookedPage->ExecuteEntry.WriteAccess = 0;
     HookedPage->ExecuteEntry.ExecuteAccess = 1;
 
-#ifdef DEBUGGING
+#if DEBUGGING
     HookedPage->ExecuteEntry.ReadAccess = 1;
     HookedPage->ExecuteEntry.WriteAccess = 1;
 #endif
@@ -318,14 +317,17 @@ BOOLEAN EptHookAddHook(PVMM_CONTEXT Context, PVOID TargetAddress, PVOID HookFunc
     return TRUE;
 }
 
-BOOLEAN EptClearHooks(PVMM_CONTEXT Context) {
+BOOLEAN EptClearHooks(PVMM_CONTEXT Context, BOOL InvalidateTLB) {
     PLIST_ENTRY TempList = 0;
 
     TempList = &Context->EptState->HookedPagesList;
     while (&Context->EptState->HookedPagesList != TempList->Flink) {
         TempList = TempList->Flink;
         PEPT_HOOKED_PAGE_DETAIL HookedEntry = CONTAINING_RECORD(TempList, EPT_HOOKED_PAGE_DETAIL, PageHookList);
-        EptSetPML1AndInvalidateTLB(Context, HookedEntry->EntryAddress, HookedEntry->OriginalEntry, InveptSingleContext);
+        if(InvalidateTLB)
+            EptSetPML1AndInvalidateTLB(Context, HookedEntry->EntryAddress, HookedEntry->OriginalEntry, InveptSingleContext);
+        else
+            EptSetPML1(Context, HookedEntry->EntryAddress, HookedEntry->OriginalEntry);
 
         OsFreeNonpagedMemory(HookedEntry);
 

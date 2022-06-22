@@ -127,7 +127,7 @@ VOID ExitHandleVmcall(PVMM_PROCESSOR_CONTEXT ProcessorContext, PVMEXIT_CONTEXT E
 
 			break;
 		case 2: //EPT Reset Hooks
-			EptClearHooks(ProcessorContext->GlobalContext);
+			EptClearHooks(ProcessorContext->GlobalContext, TRUE);
 			break;
 		case 99:
 			ExitHandleTerminateVmx(ProcessorContext, ExitContext);

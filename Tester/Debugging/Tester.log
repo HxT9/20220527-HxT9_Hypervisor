@@ -1,0 +1,9 @@
+﻿  Tester.c
+E:\alber\source\repos\20220527-HxT9_Hypervisor\Tester\Tester.c(37,16): warning C4477: 'printf' : format string '%p' requires an argument of type 'void *', but variadic argument 1 has type 'DWORD'
+E:\alber\source\repos\20220527-HxT9_Hypervisor\Tester\Tester.c(44,39): warning C4047: '=': 'unsigned __int64' differs in levels of indirection from 'void (__cdecl *)()'
+E:\alber\source\repos\20220527-HxT9_Hypervisor\Tester\Tester.c(45,37): warning C4047: '=': 'unsigned __int64' differs in levels of indirection from 'void (__cdecl *)()'
+E:\alber\source\repos\20220527-HxT9_Hypervisor\Tester\Tester.c(46,46): warning C4047: '=': 'unsigned __int64' differs in levels of indirection from 'void (__cdecl **)()'
+E:\alber\source\repos\20220527-HxT9_Hypervisor\Tester\Tester.c(49,14): warning C4013: 'getch' undefined; assuming extern returning int
+E:\alber\source\repos\20220527-HxT9_Hypervisor\Tester\Tester.c(62,22): warning C4047: '=': 'unsigned __int64' differs in levels of indirection from 'HookData *'
+  LINK : /LTCG specified but no code generation required; remove /LTCG from the link command line to improve linker performance
+  Tester.vcxproj -> E:\alber\source\repos\20220527-HxT9_Hypervisor\Debugging\Tester.exe

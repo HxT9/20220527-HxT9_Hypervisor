@@ -191,7 +191,7 @@ VOID FreeLogicalProcessorContext(PVMM_PROCESSOR_CONTEXT Context)
 }
 
 VOID FreeVmmEpt(PVMM_CONTEXT Context) {
-    EptClearHooks(Context);
+    EptClearHooks(Context, FALSE);
 
     if(Context->EptState->EptPageTable)
         OsFreeContiguousAlignedPages(Context->EptState->EptPageTable);
@@ -444,7 +444,6 @@ UINT64 VmxOffGetRip(PVMM_CONTEXT Context) {
 
 BOOL HandleVmxOff(PVMM_CONTEXT Context, PGPREGISTER_CONTEXT GuestRegisters)
 {
-    __debugbreak();
     PVMM_PROCESSOR_CONTEXT ProcessorContext;
 
     UNREFERENCED_PARAMETER(GuestRegisters);

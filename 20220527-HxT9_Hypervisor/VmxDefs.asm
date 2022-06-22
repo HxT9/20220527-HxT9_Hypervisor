@@ -101,6 +101,7 @@ TerminateVmcall PROC
 	mov rcx, 0359309h
 	mov rax, 99
 	vmcall
+	ret
 TerminateVmcall ENDP
 
 ; VM entry point. This is where the processor will start execution
@@ -200,6 +201,7 @@ AsmHandleVmxOff PROC
 	sub rsp, 020h ; shadow space
     call VmxOffGetRsp
     add rsp, 020h ; remove for shadow space
+    
     mov [rsp+88h], rax  ; now, rax contains rsp
     
 	mov rcx, [rsp+080h]

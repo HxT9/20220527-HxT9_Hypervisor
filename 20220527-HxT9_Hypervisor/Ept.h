@@ -240,5 +240,6 @@ PEPT_PML1_ENTRY EptGetPml1Entry(PVMM_EPT_PAGE_TABLE EptPageTable, SIZE_T Physica
  * @return VOID
  */
 VOID EptSetPML1AndInvalidateTLB(PVMM_CONTEXT Context, PEPT_PML1_ENTRY EntryAddress, EPT_PML1_ENTRY EntryValue, INVEPT_TYPE InvalidationType);
+VOID EptSetPML1(PVMM_CONTEXT Context, PEPT_PML1_ENTRY EntryAddress, EPT_PML1_ENTRY EntryValue);
 
 BOOLEAN EptHandleEptViolation(PVMM_PROCESSOR_CONTEXT ProcessorContext, PVMEXIT_CONTEXT ExitContext);

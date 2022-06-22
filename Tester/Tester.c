@@ -1,9 +1,11 @@
 #include <Windows.h>
 #include <stdio.h>
 
+#if _WIN64
 extern void asmHook(SIZE_T ecx_pwd, SIZE_T edx_HookData, SIZE_T eax_action, SIZE_T ebx_pid);
 extern void asmCleanHook();
 extern void asmTest();
+#endif
 
 typedef struct _HookData {
     unsigned __int64 FunctionToHook;
@@ -13,12 +15,19 @@ typedef struct _HookData {
 
 void (*printFun)();
 
-void print() {
-    printf("Print original\n");
+DECLSPEC_NOINLINE void print() {
+    int a = 1;
+    int b = 2;
+    int c = a ^ b;
+    for (int i = 0; i < 10; i++) {
+        a++;
+    }
+    c = a ^ b;
+
+    printf("Print original %d\n", c);
 }
 
 void hkPrint() {
-    DebugBreak();
     printf("Print hooked");
     printFun();
 }
@@ -27,7 +36,12 @@ int main()
 {
     HookData hkData;
 
-    asmCleanHook();
+#if _WIN64
+    __try {
+        asmCleanHook();
+    }
+    __except (EXCEPTION_EXECUTE_HANDLER) {}
+#endif
 
     printf("Tester\n");
     while (1) {
@@ -61,26 +75,20 @@ int main()
         Sleep(500);
 
         __try {
-#ifdef x86
-            __asm {
-                mov ecx, 0x359309
-                mov edx, origPrint
-                mov eax, hookPrint
-                mov ebx, printFunction
-                vmcall
-            }
-#else
+#if _WIN64
             asmHook(rcx, rdx, rax, rbx);
 #endif
         }
         __except (EXCEPTION_EXECUTE_HANDLER) {}
 
-        printf("Calling print\n");
+        printf("Calling print. Enter to continue\n");
+        getch();
         print();
 
         getch();
     }
-
+#if _WIN64
     asmCleanHook();
+#endif
     system("pause");
 }
