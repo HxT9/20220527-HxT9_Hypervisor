@@ -13,7 +13,8 @@ typedef struct _HookData {
     unsigned __int64 TrampolineFunction;
 } HookData, *PHookData;
 
-void (*printFun)();
+typedef (*printFun)();
+printFun pFTrampoline;
 
 DECLSPEC_NOINLINE void print() {
     int a = 1;
@@ -29,11 +30,15 @@ DECLSPEC_NOINLINE void print() {
 
 void hkPrint() {
     printf("Print hooked");
-    printFun();
+    pFTrampoline();
 }
 
 int main()
 {
+    pFTrampoline = print;
+    pFTrampoline();
+
+    return;
     HookData hkData;
 
 #if _WIN64
@@ -48,13 +53,13 @@ int main()
         printf("Pid               0x%p\n", GetCurrentProcessId());
         printf("origPrint         0x%p\n", &print);
         printf("hookPrint         0x%p\n", &hkPrint);
-        printFun = malloc(0x100);
-        printf("printFunction Ref 0x%p\n", &printFun);
+        pFTrampoline = VirtualAlloc(NULL, 0x100, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+        printf("printFunction Ref 0x%p\n", &pFTrampoline);
 
 
         hkData.FunctionToHook = &print;
         hkData.HkFunction = &hkPrint;
-        hkData.TrampolineFunction = &printFun;
+        hkData.TrampolineFunction = &pFTrampoline;
 
         printf("Calling print. Press Enter to continue\n");
         getch();

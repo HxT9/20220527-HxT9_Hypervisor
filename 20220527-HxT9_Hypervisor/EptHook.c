@@ -9,34 +9,9 @@ extern size_t __fastcall LDE(const void* lpData, unsigned int size);
 
 VOID EptHookWriteAbsoluteJump(PCHAR TargetBuffer, SIZE_T TargetAddress, BOOL IsX64)
 {
-    if (IsX64) {
-        /*
-        48 B8 56 34 12 90 78 56 34 12   mov rax, 01234567890123456h
-        FF E0                           jmp rax
-        */
-        TargetBuffer[0] = 0x48;
-        TargetBuffer[1] = 0xB8;
-        *((PSIZE_T)&TargetBuffer[2]) = TargetAddress;
-        TargetBuffer[10] = 0xFF;
-        TargetBuffer[11] = 0xE0;
-    }else{
-        /*
-        B8 78 56 34 12                  mov eax, 012345678h
-        FF E0                           jmp eax
-        */
-        TargetBuffer[0] = 0xB8;
-        *((PUINT32)&TargetBuffer[1]) = (UINT32)TargetAddress;
-        TargetBuffer[5] = 0xFF;
-        TargetBuffer[6] = 0xE0;
-    }
-
-    return;
-
-    int index = 0;
     //push f1234567h                        68 67 45 23 f1
     //mov dword ptr [rsp+4], 5678h          c7 44 24 04 67 45 23 f1
     //ret                                   c3
-    "\x68\x34\x12\x00\x00\xc7\x44\x24\x04\x78\x56\x00\x00\xC3";
 
     //
     // push Lower 4-byte TargetAddress
@@ -88,7 +63,7 @@ BOOL EptHookInstructionMemory(PVMM_CONTEXT Context, PEPT_HOOKED_PAGE_DETAIL Hook
     }
 
     /* Determine the number of instructions necessary to overwrite using Length Disassembler Engine */
-    for (SizeOfHookedInstructions = 0; SizeOfHookedInstructions < 14; SizeOfHookedInstructions += ldisasm(TargetFunctionInSafeMemory, IsX64))
+    for (SizeOfHookedInstructions = 0; SizeOfHookedInstructions < 14; SizeOfHookedInstructions += LDE(TargetFunctionInSafeMemory, (IsX64 ? 64 : 0)))
     {
         // Get the full size of instructions necessary to copy
     }
