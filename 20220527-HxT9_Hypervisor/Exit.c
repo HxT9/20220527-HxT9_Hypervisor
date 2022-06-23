@@ -99,7 +99,6 @@ VOID ExitHandleVmcall(PVMM_PROCESSOR_CONTEXT ProcessorContext, PVMEXIT_CONTEXT E
 	HookData hkData;
 
 	if (ExitContext->GuestContext->GuestRCX == VMX_VMCALL_HOOK_PWD) {
-		__debugbreak();
 		//HxTLog("VmCall add page hook at 0x%p to 0x%p trampoline at 0x%p", ExitContext->GuestContext->GuestRDX, ExitContext->GuestContext->GuestRAX, (PVOID*)ExitContext->GuestContext->GuestRBX);
 		//EptAddPageHook(ProcessorContext, ExitContext->GuestContext->GuestRDX, ExitContext->GuestContext->GuestRAX, (PVOID*)ExitContext->GuestContext->GuestRBX);
 

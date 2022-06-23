@@ -5,7 +5,33 @@
 #include "Logger.h"
 #include "LengthDisassemblerEngine.h"
 
+#define ZYDIS_STATIC_DEFINE
+#include <Zydis/Zydis.h>
+
 extern size_t __fastcall LDE(const void* lpData, unsigned int size);
+
+SIZE_T calcTrampolineSize(UINT64 TargetFunction, INT64 MinSize, BOOL IsX64) {
+    ZydisDecoder decoder;
+    INT64 totalSize = 0;
+    if (IsX64) {
+        if (!ZYAN_SUCCESS(ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_64, ZYDIS_STACK_WIDTH_64)))
+            return 0;
+    }
+    else {
+        if (!ZYAN_SUCCESS(ZydisDecoderInit(&decoder, ZYDIS_MACHINE_MODE_LONG_COMPAT_32, ZYDIS_STACK_WIDTH_32)))
+            return 0;
+    }
+
+    ZydisDecodedInstruction instruction;
+    ZydisDecodedOperand operand[ZYDIS_MAX_OPERAND_COUNT];
+    while (ZYAN_SUCCESS(ZydisDecoderDecodeFull(&decoder, TargetFunction, (ZyanUSize)(PAGE_SIZE - (UINT64)PAGE_OFFSET(TargetFunction)), &instruction, &operand, ZYDIS_MAX_OPERAND_COUNT, 0))) {
+        TargetFunction += instruction.length;
+        totalSize += instruction.length;
+
+        if (totalSize >= MinSize) break;
+    }
+    return totalSize;
+}
 
 VOID EptHookWriteAbsoluteJump(PCHAR TargetBuffer, SIZE_T TargetAddress, BOOL IsX64)
 {
@@ -62,11 +88,13 @@ BOOL EptHookInstructionMemory(PVMM_CONTEXT Context, PEPT_HOOKED_PAGE_DETAIL Hook
         return FALSE;
     }
 
+    SizeOfHookedInstructions = calcTrampolineSize(TargetFunctionInSafeMemory, 14, IsX64);
     /* Determine the number of instructions necessary to overwrite using Length Disassembler Engine */
-    for (SizeOfHookedInstructions = 0; SizeOfHookedInstructions < 14; SizeOfHookedInstructions += LDE(TargetFunctionInSafeMemory, (IsX64 ? 64 : 0)))
+    /*for (SizeOfHookedInstructions = 0; SizeOfHookedInstructions < 14; SizeOfHookedInstructions += LDE(TargetFunctionInSafeMemory, (IsX64 ? 64 : 0)))
     {
         // Get the full size of instructions necessary to copy
-    }
+    }*/
+    if (!SizeOfHookedInstructions) return FALSE;
 
     HxTLog("Number of bytes of instruction mem: %d\n", SizeOfHookedInstructions);
 
@@ -237,7 +265,7 @@ BOOLEAN EptHookAddHook(PVMM_CONTEXT Context, PVOID TargetAddress, PVOID HookFunc
     HookedPage->ExecuteEntry.WriteAccess = 0;
     HookedPage->ExecuteEntry.ExecuteAccess = 1;
 
-#if DEBUGGING
+#if 0
     HookedPage->ExecuteEntry.ReadAccess = 1;
     HookedPage->ExecuteEntry.WriteAccess = 1;
 #endif

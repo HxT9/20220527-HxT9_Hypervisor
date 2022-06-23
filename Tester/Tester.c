@@ -35,10 +35,21 @@ void hkPrint() {
 
 int main()
 {
-    pFTrampoline = print;
-    pFTrampoline();
+    /*UINT64 printAddr = &print;
+    pFTrampoline = VirtualAlloc(NULL, 0x100, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+    BYTE tr[] = {0x68, 0, 0, 0, 0, 0xc7, 0x44, 0x24, 0x04, 0, 0, 0, 0, 0xc3};
+    *((PUINT32)&tr[1]) = (UINT32)printAddr;
+    *((PUINT32)&tr[9]) = (UINT32)(printAddr >> 32);
+    memcpy(pFTrampoline, tr, sizeof(tr));
 
-    return;
+    printf("origPrint         0x%p\n", &print);
+    printf("hookPrint         0x%p\n", &hkPrint);
+    printf("printFunction Ref 0x%p\n", pFTrampoline);
+    getch();
+
+    hkPrint();
+    return;*/
+
     HookData hkData;
 
 #if _WIN64
@@ -54,12 +65,13 @@ int main()
         printf("origPrint         0x%p\n", &print);
         printf("hookPrint         0x%p\n", &hkPrint);
         pFTrampoline = VirtualAlloc(NULL, 0x100, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-        printf("printFunction Ref 0x%p\n", &pFTrampoline);
+        __stosb(pFTrampoline, 0x00, 0x100);
+        printf("printFunction Ref 0x%p\n", pFTrampoline);
 
 
         hkData.FunctionToHook = &print;
         hkData.HkFunction = &hkPrint;
-        hkData.TrampolineFunction = &pFTrampoline;
+        hkData.TrampolineFunction = pFTrampoline;
 
         printf("Calling print. Press Enter to continue\n");
         getch();
