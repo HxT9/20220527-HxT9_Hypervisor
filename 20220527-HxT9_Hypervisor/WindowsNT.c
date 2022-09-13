@@ -63,6 +63,8 @@ VOID OsRestoreContext(CONTEXT* ContextRecord)
 
 PVOID OsAllocateNonpagedMemory(SIZE_T NumberOfBytes)
 {
+	if (!NumberOfBytes) return NULL;
+
 	PVOID Output;
 
 	Output = ExAllocatePoolWithTag(NonPagedPoolNx, NumberOfBytes, HV_POOL_TAG);
@@ -77,6 +79,8 @@ VOID OsFreeNonpagedMemory(PVOID MemoryPointer)
 
 PVOID OsAllocateContiguousAlignedPages(SIZE_T NumberOfPages)
 {
+	if (!NumberOfPages) return NULL;
+
 	PHYSICAL_ADDRESS MaxSize;
 	PVOID Output;
 
@@ -95,6 +99,8 @@ VOID OsFreeContiguousAlignedPages(PVOID PageRegionAddress)
 
 PVOID OsAllocateExecutableNonpagedMemory(SIZE_T NumberOfBytes)
 {
+	if (!NumberOfBytes) return NULL;
+
 	PVOID Output;
 
 	Output = ExAllocatePoolWithTag(NonPagedPool, NumberOfBytes, HV_POOL_TAG);
@@ -108,6 +114,8 @@ PVOID OsAllocateExecutableNonpagedMemory(SIZE_T NumberOfBytes)
 }
 
 PVOID OsAllocateMappingAddress(SIZE_T NumberOfBytes) {
+	if (!NumberOfBytes) return NULL;
+
 	return MmAllocateMappingAddress(NumberOfBytes, HV_POOL_TAG);
 }
 

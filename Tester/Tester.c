@@ -4,7 +4,7 @@
 #if _WIN64
 extern void asmHook(SIZE_T ecx_pwd, SIZE_T edx_HookData, SIZE_T eax_action, SIZE_T ebx_pid);
 extern void asmCleanHook();
-extern void asmTest();
+extern int asmTest();
 #endif
 
 typedef struct _HookData {
@@ -15,6 +15,14 @@ typedef struct _HookData {
 
 typedef (*printFun)();
 printFun pFTrampoline;
+
+typedef (*testFun)();
+testFun tFTrampoline;
+
+void hkTest() {
+    printf("HK Test");
+    tFTrampoline();
+}
 
 DECLSPEC_NOINLINE void print() {
     int a = 1;
@@ -35,21 +43,6 @@ void hkPrint() {
 
 int main()
 {
-    /*UINT64 printAddr = &print;
-    pFTrampoline = VirtualAlloc(NULL, 0x100, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-    BYTE tr[] = {0x68, 0, 0, 0, 0, 0xc7, 0x44, 0x24, 0x04, 0, 0, 0, 0, 0xc3};
-    *((PUINT32)&tr[1]) = (UINT32)printAddr;
-    *((PUINT32)&tr[9]) = (UINT32)(printAddr >> 32);
-    memcpy(pFTrampoline, tr, sizeof(tr));
-
-    printf("origPrint         0x%p\n", &print);
-    printf("hookPrint         0x%p\n", &hkPrint);
-    printf("printFunction Ref 0x%p\n", pFTrampoline);
-    getch();
-
-    hkPrint();
-    return;*/
-
     HookData hkData;
 
 #if _WIN64
@@ -61,22 +54,23 @@ int main()
 
     printf("Tester\n");
     while (1) {
-        printf("Pid               0x%p\n", GetCurrentProcessId());
-        printf("origPrint         0x%p\n", &print);
-        printf("hookPrint         0x%p\n", &hkPrint);
-        pFTrampoline = VirtualAlloc(NULL, 0x100, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
-        __stosb(pFTrampoline, 0x00, 0x100);
-        printf("printFunction Ref 0x%p\n", pFTrampoline);
+        printf("Pid                 0x%p\n", GetCurrentProcessId());
+        printf("main                0x%p\n", &main);
+        printf("origPrint           0x%p\n", &asmTest);
+        printf("hookPrint           0x%p\n", &hkTest);
+        tFTrampoline = VirtualAlloc(NULL, 0x100, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+        __stosb(tFTrampoline, 0x90, 0x100);
+        printf("printFunction Ref   0x%p\n", tFTrampoline);
 
 
-        hkData.FunctionToHook = &print;
-        hkData.HkFunction = &hkPrint;
-        hkData.TrampolineFunction = pFTrampoline;
+        hkData.FunctionToHook = &asmTest;
+        hkData.HkFunction = &hkTest;
+        hkData.TrampolineFunction = tFTrampoline;
 
         printf("Calling print. Press Enter to continue\n");
         getch();
 
-        print();
+        printf("%d", asmTest());
 
         printf("Hooking\n");
 
@@ -100,7 +94,7 @@ int main()
 
         printf("Calling print. Enter to continue\n");
         getch();
-        print();
+        printf("%d", asmTest());
 
         getch();
     }

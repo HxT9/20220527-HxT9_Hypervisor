@@ -1,5 +1,5 @@
-
 .CODE
+
 
 asmHook PROC
 	mov rax, r8
@@ -16,13 +16,13 @@ asmCleanHook PROC
 asmCleanHook ENDP
 
 asmTest PROC
-	mov rax, comeHere
-	push rax
+	cmp rax, rax
+	je comeHere
+	mov rax, 0
 	ret
 
 	comeHere:
-	push 0f1234567h
-	pop rax
+	mov rax, 1
 	ret
 asmTest ENDP
 

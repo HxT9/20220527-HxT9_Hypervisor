@@ -169,9 +169,6 @@
     <ClInclude Include="Memory.h">
       <Filter>Source Files\Memory</Filter>
     </ClInclude>
-    <ClInclude Include="LengthDisassemblerEngine.h">
-      <Filter>Source Files\Utilities</Filter>
-    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <MASM Include="VmxDefs.asm">
